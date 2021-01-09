@@ -22,6 +22,14 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.conf.HAUtil;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.tez.client.FrameworkClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -193,4 +201,61 @@ public class TokenCache {
     creds.mergeAll(binary);
   }
 
+  public static void obtainTokenForResourceManager(Credentials credentials,
+                                                   FrameworkClient frameworkClient, TezConfiguration tezConf)
+      throws IOException, YarnException {
+    Text rmPrincipal = new Text(getRMPrincipal(tezConf));
+    Text rmDTService = ClientRMProxy.getRMDelegationTokenService(tezConf);
+    LOG.debug("RM info to get dt : rmPrincipal={}, rmDTService={}", rmPrincipal, rmDTService);
+
+    org.apache.hadoop.yarn.api.records.Token rmDelegationToken =
+        frameworkClient.getRMDelegationToken(rmPrincipal);
+    if (rmDelegationToken != null) {
+      Token<TokenIdentifier> convertedToken = ConverterUtils.convertFromYarn(
+          rmDelegationToken, rmDTService);
+      credentials.addToken(convertedToken.getService(), convertedToken);
+      LOG.info("Got dt for {}; {}", tezConf.get(YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS), convertedToken);
+    }
+  }
+
+  /**
+   * Look up and return the resource manager's principal. This method
+   * automatically does the <code>_HOST</code> replacement in the principal and
+   * correctly handles HA resource manager configurations.
+   *
+   * From: YARN-4629
+   * @param conf the {@link Configuration} file from which to read the
+   * principal
+   * @return the resource manager's principal string
+   * @throws IOException thrown if there's an error replacing the host name
+   */
+  private static String getRMPrincipal(Configuration conf) throws IOException {
+    String principal = conf.get(YarnConfiguration.RM_PRINCIPAL, "");
+    String hostname;
+    Preconditions.checkState(!principal.isEmpty(), "Not set: " + YarnConfiguration.RM_PRINCIPAL);
+
+    if (HAUtil.isHAEnabled(conf)) {
+      YarnConfiguration yarnConf = new YarnConfiguration(conf);
+      if (yarnConf.get(YarnConfiguration.RM_HA_ID) == null) {
+        // If RM_HA_ID is not configured, use the first of RM_HA_IDS.
+        // Any valid RM HA ID should work.
+        String[] rmIds = yarnConf.getStrings(YarnConfiguration.RM_HA_IDS);
+        Preconditions.checkState((rmIds != null) && (rmIds.length > 0),
+            "Not set " + YarnConfiguration.RM_HA_IDS);
+        yarnConf.set(YarnConfiguration.RM_HA_ID, rmIds[0]);
+      }
+
+      hostname = yarnConf.getSocketAddr(
+          YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_PORT).getHostName();
+    } else {
+      hostname = conf.getSocketAddr(
+          YarnConfiguration.RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_PORT).getHostName();
+    }
+    return SecurityUtil.getServerPrincipal(principal, hostname);
+  }
 }

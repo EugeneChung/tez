@@ -21,9 +21,11 @@ package org.apache.tez.client;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -77,4 +79,5 @@ public abstract class FrameworkClient {
 
   public abstract boolean isRunning() throws IOException;
 
+  public abstract Token getRMDelegationToken(Text renewer) throws YarnException, IOException;
 }

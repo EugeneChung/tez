@@ -370,7 +370,7 @@ public class TestTezClientUtils {
         appId, null, "dagname",
         amConf, m,
         credentials, false,
-        new TezApiVersionInfo(), null, null);
+        new TezApiVersionInfo(), null, null, null);
     assertEquals(testpriority, appcontext.getPriority().getPriority());
   }
 
@@ -423,7 +423,7 @@ public class TestTezClientUtils {
     ApplicationSubmissionContext appSubmissionContext =
         TezClientUtils.createApplicationSubmissionContext(appId, dag, "amName", amConf,
             new HashMap<String, LocalResource>(), credentials, false, new TezApiVersionInfo(),
-            null, null);
+            null, null, null);
 
     ContainerLaunchContext amClc = appSubmissionContext.getAMContainerSpec();
     Map<String, ByteBuffer> amServiceData = amClc.getServiceData();
@@ -457,7 +457,7 @@ public class TestTezClientUtils {
     ApplicationSubmissionContext appSubmissionContext =
         TezClientUtils.createApplicationSubmissionContext(appId, dag, "amName", amConf,
             new HashMap<String, LocalResource>(), credentials, false, new TezApiVersionInfo(),
-            null, null);
+            null, null, null);
 
     List<String> expectedCommands = new LinkedList<String>();
     expectedCommands.add("-Dlog4j.configuratorClass=org.apache.tez.common.TezLog4jConfigurator");
@@ -498,7 +498,7 @@ public class TestTezClientUtils {
     ApplicationSubmissionContext appSubmissionContext =
         TezClientUtils.createApplicationSubmissionContext(appId, dag, "amName", amConf,
             new HashMap<String, LocalResource>(), credentials, false, new TezApiVersionInfo(),
-            null, null);
+            null, null, null);
 
     List<String> expectedCommands = new LinkedList<String>();
     expectedCommands.add("-Dlog4j.configuratorClass=org.apache.tez.common.TezLog4jConfigurator");
@@ -939,7 +939,7 @@ public class TestTezClientUtils {
     AMConfiguration amConfig = new AMConfiguration(conf, null, amConfigCredentials);
 
     Credentials amLaunchCredentials =
-        TezClientUtils.prepareAmLaunchCredentials(amConfig, sessionCredentials, conf, null);
+        TezClientUtils.prepareAmLaunchCredentials(amConfig, sessionCredentials, conf, null, null);
 
     // if there is another token in am conf creds of the same token type,
     // session token should be applied while creating ContainerLaunchContext

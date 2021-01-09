@@ -447,6 +447,7 @@ public class TezClientUtils {
    * @param tezJarResources Resources to be used by the AM
    * @param sessionCreds the credential object which will be populated with session specific
    * @param servicePluginsDescriptor descriptor for services which may be running in the AM
+   * @param frameworkClient client proxy to YARN RM
    * @return an ApplicationSubmissionContext to launch a Tez AM
    * @throws IOException
    * @throws YarnException
@@ -458,7 +459,8 @@ public class TezClientUtils {
       AMConfiguration amConfig, Map<String, LocalResource> tezJarResources,
       Credentials sessionCreds, boolean tezLrsAsArchive,
       TezApiVersionInfo apiVersionInfo,
-      ServicePluginsDescriptor servicePluginsDescriptor, JavaOptsChecker javaOptsChecker)
+      ServicePluginsDescriptor servicePluginsDescriptor, JavaOptsChecker javaOptsChecker,
+      FrameworkClient frameworkClient)
       throws IOException, YarnException {
 
     Objects.requireNonNull(sessionCreds);
@@ -487,7 +489,7 @@ public class TezClientUtils {
     // are handled separately.
     ByteBuffer securityTokens = null;
     Credentials amLaunchCredentials =
-        prepareAmLaunchCredentials(amConfig, sessionCreds, conf, binaryConfPath);
+        prepareAmLaunchCredentials(amConfig, sessionCreds, conf, binaryConfPath, frameworkClient);
 
     DataOutputBuffer dob = new DataOutputBuffer();
     amLaunchCredentials.writeTokenStorageToStream(dob);
@@ -709,7 +711,8 @@ public class TezClientUtils {
   }
 
   static Credentials prepareAmLaunchCredentials(AMConfiguration amConfig, Credentials sessionCreds,
-      TezConfiguration conf, Path binaryConfPath) throws IOException {
+                                                TezConfiguration conf, Path binaryConfPath,
+                                                FrameworkClient frameworkClient) throws IOException, YarnException {
     // Setup security tokens
     Credentials amLaunchCredentials = new Credentials();
 
@@ -725,7 +728,7 @@ public class TezClientUtils {
     // Add Staging dir creds to the list of session credentials.
     TokenCache.obtainTokensForFileSystems(sessionCreds, new Path[] {binaryConfPath }, conf);
 
-    populateTokenCache(conf, sessionCreds);
+    populateTokenCache(conf, sessionCreds, frameworkClient, amConfig.getTezConfiguration());
 
     // Add session specific credentials to the AM credentials.
     amLaunchCredentials.mergeAll(sessionCreds);
@@ -738,11 +741,12 @@ public class TezClientUtils {
   }
 
   //get secret keys and tokens and store them into TokenCache
-  private static void populateTokenCache(TezConfiguration conf, Credentials credentials)
-          throws IOException{
+  private static void populateTokenCache(TezConfiguration conf, Credentials credentials,
+                                         FrameworkClient frameworkClient, TezConfiguration tezConf)
+          throws IOException, YarnException {
     // add the delegation tokens from configuration
     String[] nameNodes = conf.getStrings(TezConfiguration.TEZ_JOB_FS_SERVERS);
-    LOG.debug("adding the following namenodes' delegation tokens:" +
+    LOG.debug("adding the following namenodes' delegation tokens: {}",
             Arrays.toString(nameNodes));
     if(nameNodes != null) {
       Path[] ps = new Path[nameNodes.length];
@@ -751,8 +755,14 @@ public class TezClientUtils {
       }
       TokenCache.obtainTokensForFileSystems(credentials, ps, conf);
     }
+
+    if (frameworkClient != null && tezConf != null &&
+        conf.getBoolean(TezConfiguration.TEZ_JOB_GET_RM_DT_ENABLED,
+            TezConfiguration.TEZ_JOB_GET_RM_DT_ENABLED_DEFAULT)) {
+      TokenCache.obtainTokenForResourceManager(credentials, frameworkClient, tezConf);
+    }
   }
-  
+
   static DAGPlan prepareAndCreateDAGPlan(DAG dag, AMConfiguration amConfig,
       Map<String, LocalResource> tezJarResources, boolean tezLrsAsArchive,
       Credentials credentials, ServicePluginsDescriptor servicePluginsDescriptor,

@@ -2121,4 +2121,11 @@ public class TezConfiguration extends Configuration {
   @ConfigurationProperty
   public static final String TEZ_MRREADER_CONFIG_UPDATE_PROPERTIES = "tez.mrreader.config.update.properties";
 
+  /**
+   *  Acquire delegation token of the YARN resource manager
+   */
+  @ConfigurationScope(Scope.AM)
+  @ConfigurationProperty(type="boolean")
+  public static final String TEZ_JOB_GET_RM_DT_ENABLED = "tez.job.get.rm-dt.enabled";
+  public static final boolean TEZ_JOB_GET_RM_DT_ENABLED_DEFAULT = false;
 }

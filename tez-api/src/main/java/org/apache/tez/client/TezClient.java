@@ -481,7 +481,7 @@ public class TezClient {
                     sessionAppId,
                     null, clientName, amConfig,
                     tezJarResources, sessionCredentials, usingTezArchiveDeploy, apiVersionInfo,
-                    servicePluginsDescriptor, javaOptsChecker);
+                    servicePluginsDescriptor, javaOptsChecker, frameworkClient);
 
     // Set Tez Sessions to not retry on AM crashes if recovery is disabled
     if (!amConfig.getTezConfiguration().getBoolean(
@@ -1123,7 +1123,7 @@ public class TezClient {
       ApplicationSubmissionContext appContext = TezClientUtils
           .createApplicationSubmissionContext(
               appId, dag, dag.getName(), amConfig, tezJarResources, credentials,
-              usingTezArchiveDeploy, apiVersionInfo, servicePluginsDescriptor, javaOptsChecker);
+              usingTezArchiveDeploy, apiVersionInfo, servicePluginsDescriptor, javaOptsChecker, frameworkClient);
       String callerContextStr = "";
       if (dag.getCallerContext() != null) {
         callerContextStr = ", callerContext=" + dag.getCallerContext().contextAsSimpleString();

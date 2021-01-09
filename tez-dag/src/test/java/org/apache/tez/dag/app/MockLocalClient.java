@@ -18,11 +18,15 @@
 
 package org.apache.tez.dag.app;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.tez.client.LocalClient;
 
@@ -64,4 +68,9 @@ public class MockLocalClient extends LocalClient {
   public MockDAGAppMaster getMockApp() {
     return mockApp;
   }
+
+    @Override
+    public Token getRMDelegationToken(Text renewer) throws YarnException, IOException {
+        return null;
+    }
 }
